@@ -1,0 +1,129 @@
+version: '3.4'
+
+services:
+  traefik:
+    image: traefik
+    container_name: traefik
+    domainname: example.co.uk
+    networks:
+      - local
+      - traefik_proxy
+    ports:
+      - "80:80"
+      - "8081:8080"
+      - "443:443"
+    environment:
+      - CF_API_EMAIL=
+      - CF_API_KEY=
+    volumes:
+      - ~/traefik:/etc/traefik
+      - ~/shared:/shared
+      - /var/run/docker.sock:/var/run/docker.sock
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=traefik"
+      - "traefik.frontend.rule=Host:traefik.example.co.uk"
+      - "traefik.port=8080"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.frontend.headers.SSLRedirect=true"
+      - "traefik.frontend.headers.STSSeconds=315360000"
+      - "traefik.frontend.headers.browserXSSFilter=true"
+      - "traefik.frontend.headers.contentTypeNosniff=true"
+      - "traefik.frontend.headers.forceSTSHeader=true"
+      - "traefik.frontend.headers.SSLHost=example.com"
+      - "traefik.frontend.headers.STSIncludeSubdomains=true"
+      - "traefik.frontend.headers.STSPreload=true"
+      - "traefik.frontend.headers.frameDeny=true"
+      - "traefik.frontend.auth.basic.usersFile=/shared/.htpasswd"
+
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    restart: always
+    ports:
+      - "9000:9000"
+#Automatically choose 'Manage the Docker instance where Portainer is running' by adding <--host=unix:///var/run/docker.sock> to the command
+    command: -H unix:///var/run/docker.sock
+    networks:
+
+      - traefik_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=portainer"
+      - "traefik.frontend.rule=Host:portainer.example.co.uk"
+      - "traefik.port=9000"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.frontend.headers.SSLRedirect=true"
+      - "traefik.frontend.headers.STSSeconds=315360000"
+      - "traefik.frontend.headers.browserXSSFilter=true"
+      - "traefik.frontend.headers.contentTypeNosniff=true"
+      - "traefik.frontend.headers.forceSTSHeader=true"
+      - "traefik.frontend.headers.SSLHost=example.co.uk"
+      - "traefik.frontend.headers.STSIncludeSubdomains=true"
+      - "traefik.frontend.headers.STSPreload=true"
+      - "traefik.frontend.headers.frameDeny=true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /home/ec2-user/openeyes/data:/data
+
+  openeyes:
+      container_name: 'openeyes'
+      image: appertaopeneyes/web-allin1:latest
+      environment:
+        TZ: 'Europe/London'
+        UID: '1'
+        GID: '1'
+        OE_MODE: 'DEV'
+        GIT_USER: 
+        GIT_EMAIL: 
+      secrets:
+        - source: SSH_PRIVATE_KEY
+      ports:
+        - "81:80"
+        - "3306:3306"
+      networks:
+      - traefik_proxy
+
+      labels:
+      - "traefik.enable=true"
+      - "traefik.backend=openeyes"
+      - "traefik.frontend.rule=Host:openeyes.example.co.uk"
+      # - "traefik.frontend.rule=Host:trialopeneyes.ddns.net"
+      # - "traefik.frontend.rule=Host:PathPrefixStrip:/"
+      - "traefik.port=80"
+      - "traefik.docker.network=traefik_proxy"
+      - "traefik.frontend.headers.SSLRedirect=true"
+      - "traefik.frontend.headers.STSSeconds=315360000"
+      - "traefik.frontend.headers.browserXSSFilter=true"
+      - "traefik.frontend.headers.contentTypeNosniff=true"
+      - "traefik.frontend.headers.forceSTSHeader=true"
+      - "traefik.frontend.headers.SSLHost=example.co.uk"
+      - "traefik.frontend.headers.STSIncludeSubdomains=true"
+      - "traefik.frontend.headers.STSPreload=true"
+      - "traefik.frontend.headers.frameDeny=true"
+      volumes:
+        - "oe-web:/var/www/openeyes"
+        - "oe-db:/var/lib/mysql"
+
+      tmpfs:
+        - /tmp
+      stdin_open: true
+      tty: true
+
+volumes:
+    oe-web:
+    oe-db:
+
+secrets:
+  SSH_PRIVATE_KEY:
+    file: ~/.ssh/id_rsa
+
+
+
+networks:
+  traefik_proxy:
+    external:
+      name: traefik_proxy
+  local:
+    driver: bridge
