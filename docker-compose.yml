@@ -65,7 +65,7 @@ services:
       - "traefik.frontend.headers.frameDeny=true"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - /home/ec2-user/openeyes/data:/data
+      - ~/data:/data
 
   openeyes:
       container_name: 'openeyes'
@@ -89,8 +89,6 @@ services:
       - "traefik.enable=true"
       - "traefik.backend=openeyes"
       - "traefik.frontend.rule=Host:openeyes.example.co.uk"
-      # - "traefik.frontend.rule=Host:trialopeneyes.ddns.net"
-      # - "traefik.frontend.rule=Host:PathPrefixStrip:/"
       - "traefik.port=80"
       - "traefik.docker.network=traefik_proxy"
       - "traefik.frontend.headers.SSLRedirect=true"
